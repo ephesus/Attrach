@@ -1,0 +1,19 @@
+Attrach
+
+Hide files in the extended attributes of files on os x.
+
+A single attribute is only allowed a small number of bytes,
+but unlimited (?) attributes are allowed.
+I'll add support for large files via multiple attributes, later.
+
+----------
+
+$ gpg -e file
+$ rm file
+$ ./attrach attach file.gpg pic.jpg
+$ ls -l@ pic.jpg
+  -rw-r--r--@ 1 james  staff  30 Nov 10 22:45 pic.jpg
+          attrach  646
+$ ./attrach get pic.jpg original.gpg
+
+-james

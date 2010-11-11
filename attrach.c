@@ -59,7 +59,8 @@ int retrieve_file(char *source, char *target)
         error_exit(ERR_FILE);
     }
 
-    if (!(bytes_read = getxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE, 0, XATTR_SHOWCOMPRESSION))) {
+    if (!(bytes_read = getxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE,
+                                0, XATTR_SHOWCOMPRESSION))) {
         error_exit(ERR_RETRIEVE); 
     }
 
