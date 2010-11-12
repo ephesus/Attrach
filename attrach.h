@@ -9,13 +9,16 @@
 #define DEFAULT_MAX_FILE_SIZE 20971520
 #define ATTR_NAME "attrach"
 
-#define ERR_SWITCH 1
-#define ERR_USAGE 2
-#define ERR_ATTACH 3
-#define ERR_RETRIEVE 4
-#define ERR_FILE 5
-#define ERR_READ 6
-#define ERR_FILE_OUT 7
+#define ATTRACH_ERR_SWITCH 1
+#define ATTRACH_ERR_USAGE 2
+#define ATTRACH_ERR_ATTACH 3
+#define ATTRACH_ERR_RETRIEVE 4
+#define ATTRACH_ERR_FILE 5
+#define ATTRACH_ERR_READ 6
+#define ATTRACH_ERR_FILE_OUT 7
+#define ATTRACH_ERR_REMOVE 8
+
+#define ATTRACH_VERBOSE_ON 420
 
 typedef unsigned char byte;
 
@@ -25,5 +28,5 @@ int attach_file(char *, char *);
 int retrieve_file(char *, char *);
 int main(int, char**);
 
-int verbose = 0;
+int verbose_flag = 0;
 

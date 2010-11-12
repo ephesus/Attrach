@@ -16,6 +16,7 @@
 
 #include "attrach.h"
 
+//attach file at <source> to attributes of <target>
 int attach_file(char * const source, char * const target)
 {
     FILE *inf;
@@ -25,19 +26,20 @@ int attach_file(char * const source, char * const target)
     int bytes_read;
 
     if (!(buffer = (byte *) malloc(sizeof(byte) * DEFAULT_MAX_FILE_SIZE))) {
-        error_exit(ERR_FILE);
+        error_exit(ATTRACH_ERR_FILE);
     }
 
     if (!(inf = fopen(source, "r+"))) {
-        error_exit(ERR_FILE);
+        error_exit(ATTRACH_ERR_FILE);
     }
     bytes_read = fread(buffer, sizeof(byte), size, inf);
 
-    printf("%d\n", bytes_read);
+    if (verbose_flag)
+        printf("%d\n", bytes_read);
 
-    if (setxattr(target, attr_name, buffer, bytes_read, 0, XATTR_CREATE)) {
+    if (setxattr(target, attr_name, buffer, bytes_read, 0, XATTR_NOFOLLOW)) {
         free(buffer);
-        error_exit(ERR_FILE); 
+        error_exit(ATTRACH_ERR_ATTACH); 
     }
 
     free(buffer);
@@ -46,6 +48,7 @@ int attach_file(char * const source, char * const target)
     return 0;
 }
 
+//store the data in extended attr of <source> as file <target>
 int retrieve_file(char *source, char *target)
 {
     FILE *of, *tf;
@@ -56,21 +59,31 @@ int retrieve_file(char *source, char *target)
     buffer = (byte *) malloc(sizeof(byte) * DEFAULT_MAX_FILE_SIZE);
 
     if (!(of = fopen(target, "w+"))) {
-        error_exit(ERR_FILE);
+        error_exit(ATTRACH_ERR_FILE);
     }
 
     if (!(bytes_read = getxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE,
-                                0, XATTR_SHOWCOMPRESSION))) {
-        error_exit(ERR_RETRIEVE); 
+                    0, XATTR_NOFOLLOW|XATTR_SHOWCOMPRESSION))) {
+        error_exit(ATTRACH_ERR_RETRIEVE); 
     }
 
     if (!(tf = fopen(target, "r+"))) {
-        error_exit(ERR_FILE_OUT); 
+        error_exit(ATTRACH_ERR_FILE_OUT); 
     }
 
     fwrite(buffer, sizeof(byte), bytes_read, tf);
 
     return 0;
+}
+
+int remove_attribute(char *target)
+{
+    if (removexattr(target, "attrach", XATTR_NOFOLLOW)) {
+        error_exit(ATTRACH_ERR_REMOVE); 
+    }
+
+
+    return 0; 
 }
 
 void error_exit(int err)
@@ -84,22 +97,22 @@ void error_exit(int err)
     char *error_message = generic_fail;
 
     switch (err) {
-        case ERR_FILE_OUT:
+        case ATTRACH_ERR_FILE_OUT:
             error_message = file_out_fail;
             break;
-        case ERR_FILE:
+        case ATTRACH_ERR_FILE:
             error_message = file_fail;
             break;
-        case ERR_ATTACH:
+        case ATTRACH_ERR_ATTACH:
             error_message = attach_fail;
             break;
-        case ERR_RETRIEVE:
+        case ATTRACH_ERR_RETRIEVE:
             error_message = retrieve_fail;
             break;
-        case ERR_USAGE:
+        case ATTRACH_ERR_USAGE:
             show_usage();
             break;
-        case ERR_SWITCH:
+        case ATTRACH_ERR_SWITCH:
             //let getopt handle it
             exit(1);
             break;
@@ -121,6 +134,7 @@ void show_usage()
 {
     printf("attrach [options] attach <hidefile> <targetfile>\n");
     printf("attrach [options] get <targetfile> <saveasfile>\n");
+    printf("attrach [options] remove <targetfile>\n");
     printf(" options:\n");
     printf(" --verbose\n");
     printf(" --version\n");
@@ -132,6 +146,9 @@ int main( int ac, char* av[])
 
     int c;
 
+    if (ac == 1)
+      error_exit(ATTRACH_ERR_USAGE);
+
     while (1) 
     {
         int option_index = 0;
@@ -141,10 +158,6 @@ int main( int ac, char* av[])
             {"help", 0, 0, 'h'},
             {0, 0, 0, 0}
         };
-
-        if (ac < 4 || ac > 4)
-            error_exit(ERR_USAGE);
-
         c = getopt_long (ac, av, "vVh",
                 long_options, &option_index);
         if (c == -1)
@@ -157,24 +170,38 @@ int main( int ac, char* av[])
                 break;
             case 'h':
                 show_usage();
+                exit(0);
                 break;
             case 'v':
-                verbose = 420;
+                verbose_flag = ATTRACH_VERBOSE_ON;
                 break;
             default:
                 /* invalid switch, so failing */
-                error_exit(ERR_SWITCH);
+                error_exit(ATTRACH_ERR_SWITCH);
         }
     }
 
-    if (!strcmp(av[1], "attach")){
-        if (attach_file(av[2], av[3])) {
+    if (!strcmp(av[optind], "attach")){
+        if (ac - optind != 3)
+            error_exit(ATTRACH_ERR_USAGE);
+
+        if (attach_file(av[optind+1], av[optind+2])) {
             printf("made it\n");
-            error_exit(ERR_ATTACH);
+            error_exit(ATTRACH_ERR_ATTACH);
         }
-    } else if (!strcmp(av[1], "get")) {
-        if (retrieve_file(av[2], av[3])) {
-            error_exit(ERR_RETRIEVE);
+    } else if (!strcmp(av[optind], "get")) {
+        if (ac - optind != 3)
+            error_exit(ATTRACH_ERR_USAGE);
+
+        if (retrieve_file(av[optind+1], av[optind+2])) {
+            error_exit(ATTRACH_ERR_RETRIEVE);
+        }
+    } else if (!strcmp(av[optind], "remove")) {
+        if (ac - optind != 2)
+            error_exit(ATTRACH_ERR_USAGE);
+
+        if (remove_attribute(av[optind+1])) {
+            error_exit(ATTRACH_ERR_REMOVE);
         }
     } else {
         show_usage(); 
