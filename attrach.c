@@ -87,14 +87,14 @@ int remove_attribute(char *target)
 
 void error_exit(int err)
 {
-    char generic_fail[] = "Error happened";
-    char attach_fail[] = "File Couldn't Be Attached";
-    char retrieve_fail[] = "File Couldn't Be Retrieved :(";
-    char file_fail[] = "File Couldn't Be Opened :(";
-    char file_out_fail[] = "OutFile Couldn't Be Opened :(";
-    char file_remove_fail[] = "Attribute couldn't be removed";
+    const char generic_fail[] = "Error happened";
+    const char attach_fail[] = "File Couldn't Be Attached";
+    const char retrieve_fail[] = "File Couldn't Be Retrieved :(";
+    const char file_fail[] = "File Couldn't Be Opened :(";
+    const char file_out_fail[] = "OutFile Couldn't Be Opened :(";
+    const char file_remove_fail[] = "Attribute couldn't be removed";
 
-    char *error_message = generic_fail;
+    const char *error_message = generic_fail;
 
     switch (err) {
         case ATTRACH_ERR_REMOVE:
