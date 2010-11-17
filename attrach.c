@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
-#include<errno.h>
+#include <errno.h>
 
 #include "attrach.h"
 
@@ -78,10 +78,9 @@ int retrieve_file(char *source, char *target)
 
 int remove_attribute(char *target)
 {
-    if (removexattr(target, "attrach", XATTR_NOFOLLOW)) {
+    if (removexattr(target, attribute_name, XATTR_NOFOLLOW)) {
         error_exit(ATTRACH_ERR_REMOVE); 
     }
-
 
     return 0; 
 }
@@ -93,10 +92,14 @@ void error_exit(int err)
     char retrieve_fail[] = "File Couldn't Be Retrieved :(";
     char file_fail[] = "File Couldn't Be Opened :(";
     char file_out_fail[] = "OutFile Couldn't Be Opened :(";
+    char file_remove_fail[] = "Attribute couldn't be removed";
 
     char *error_message = generic_fail;
 
     switch (err) {
+        case ATTRACH_ERR_REMOVE:
+            error_message = file_remove_fail;
+            break;
         case ATTRACH_ERR_FILE_OUT:
             error_message = file_out_fail;
             break;
@@ -136,6 +139,7 @@ void show_usage()
     printf("attrach [options] get <targetfile> <saveasfile>\n");
     printf("attrach [options] remove <targetfile>\n");
     printf(" options:\n");
+    printf(" --attribute <name>\n");
     printf(" --verbose\n");
     printf(" --version\n");
     printf(" --help\n");
@@ -147,18 +151,19 @@ int main( int ac, char* av[])
     int c;
 
     if (ac == 1)
-      error_exit(ATTRACH_ERR_USAGE);
+        error_exit(ATTRACH_ERR_USAGE);
 
     while (1) 
     {
         int option_index = 0;
         static struct option long_options[] = {
             {"verbose", 0, 0, 'v'},
+            {"attribute", 1, 0, 'a'},
             {"version", 0, 0, 'V'},
             {"help", 0, 0, 'h'},
             {0, 0, 0, 0}
         };
-        c = getopt_long (ac, av, "vVh",
+        c = getopt_long (ac, av, "va:Vh",
                 long_options, &option_index);
         if (c == -1)
             break;
@@ -167,6 +172,9 @@ int main( int ac, char* av[])
             case 'V':
                 show_version();
                 exit(0);
+                break;
+            case 'a':
+                strcpy(attribute_name, optarg);
                 break;
             case 'h':
                 show_usage();

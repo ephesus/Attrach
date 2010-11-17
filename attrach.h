@@ -29,4 +29,5 @@ int retrieve_file(char *, char *);
 int main(int, char**);
 
 int verbose_flag = 0;
+char attribute_name[] = "attrach";
 
