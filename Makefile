@@ -1,8 +1,10 @@
 OPTS=-Wall
 SOURCE_FILES=attrach.c
+#COMPILER=gcc
+COMPILER=clang
 
 all:
-	gcc ${OPTS} -o attrach ${SOURCE_FILES}
+	${COMPILER} ${OPTS} -o attrach ${SOURCE_FILES}
 
 clean:
 	rm attrach

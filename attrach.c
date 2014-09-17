@@ -37,7 +37,11 @@ int attach_file(char * const source, char * const target)
     if (verbose_flag)
         printf("%d\n", bytes_read);
 
+#ifdef XATTR_NOFOLLOW
     if (setxattr(target, attr_name, buffer, bytes_read, 0, XATTR_NOFOLLOW)) {
+#else
+    if (lsetxattr(target, attr_name, buffer, bytes_read, 0)) {
+#endif
         free(buffer);
         error_exit(ATTRACH_ERR_ATTACH); 
     }
@@ -62,10 +66,16 @@ int retrieve_file(char *source, char *target)
         error_exit(ATTRACH_ERR_FILE);
     }
 
+#if defined (XATTR_NOFOLLOW) && defined (XATTR_SHOWCOMPRESSION)
     if (!(bytes_read = getxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE,
                     0, XATTR_NOFOLLOW|XATTR_SHOWCOMPRESSION))) {
         error_exit(ATTRACH_ERR_RETRIEVE); 
     }
+#else
+    if (!(bytes_read = lgetxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE))) {
+        error_exit(ATTRACH_ERR_RETRIEVE); 
+    }
+#endif
 
     if (!(tf = fopen(target, "r+"))) {
         error_exit(ATTRACH_ERR_FILE_OUT); 
@@ -78,7 +88,11 @@ int retrieve_file(char *source, char *target)
 
 int remove_attribute(char *target)
 {
+#ifdef XATTR_NOFOLLOW
     if (removexattr(target, attribute_name, XATTR_NOFOLLOW)) {
+#else
+    if (lremovexattr(target, attribute_name)) {
+#endif
         error_exit(ATTRACH_ERR_REMOVE); 
     }
 
