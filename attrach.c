@@ -35,7 +35,7 @@ int attach_file(char * const source, char * const target)
     bytes_read = fread(buffer, sizeof(byte), size, inf);
 
     if (verbose_flag)
-        printf("%d\n", bytes_read);
+        printf("%d bytes read\n", bytes_read);
 
 #ifdef XATTR_NOFOLLOW
     if (setxattr(target, attr_name, buffer, bytes_read, 0, XATTR_NOFOLLOW)) {
@@ -208,7 +208,6 @@ int main( int ac, char* av[])
             error_exit(ATTRACH_ERR_USAGE);
 
         if (attach_file(av[optind+1], av[optind+2])) {
-            printf("made it\n");
             error_exit(ATTRACH_ERR_ATTACH);
         }
     } else if (!strcmp(av[optind], "get")) {
