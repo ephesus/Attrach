@@ -1,8 +1,9 @@
 Attrach
 
 Hide files in the extended attributes of files on os x.
+(Though there's really no reason to do so).
 
-A single attribute is only allowed 3802 bytes on my system
+Max filesize is set to 20MB
 
 ----------
 

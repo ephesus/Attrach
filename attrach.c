@@ -20,7 +20,6 @@
 int attach_file(char * const source, char * const target)
 {
     FILE *inf;
-    const char attr_name[] = ATTR_NAME;
     int size = DEFAULT_MAX_FILE_SIZE;
     byte *buffer;
     int bytes_read;
@@ -37,11 +36,7 @@ int attach_file(char * const source, char * const target)
     if (verbose_flag)
         printf("%d bytes read\n", bytes_read);
 
-#ifdef XATTR_NOFOLLOW
-    if (setxattr(target, attr_name, buffer, bytes_read, 0, XATTR_NOFOLLOW)) {
-#else
-    if (lsetxattr(target, attr_name, buffer, bytes_read, 0)) {
-#endif
+    if (chunk_and_attach(target, buffer, bytes_read)) {
         free(buffer);
         error_exit(ATTRACH_ERR_ATTACH); 
     }
@@ -52,50 +47,109 @@ int attach_file(char * const source, char * const target)
     return 0;
 }
 
+int chunk_and_attach(char * const target, byte *buffer, int bytes_read)
+{
+    char *attr_name;
+    int i;
+    int bytes_to_copy;
+    attr_name = (char *) malloc(sizeof(char) * ATTR_LENGTH + 1);
+    byte *chunk;
+
+    chunk = (byte*) malloc(sizeof(byte) * DEFAULT_MAX_FILE_SIZE);
+
+    for (i=0; i<((bytes_read/DEFAULT_CHUNK_SIZE)+1); i++) {
+        bytes_to_copy = (DEFAULT_CHUNK_SIZE*i+DEFAULT_CHUNK_SIZE < bytes_read) ? DEFAULT_CHUNK_SIZE : bytes_read - (DEFAULT_CHUNK_SIZE*i);
+
+        memcpy(chunk, buffer+(DEFAULT_CHUNK_SIZE*i), bytes_to_copy);
+        sprintf(attr_name, ATTR_BASE_NAME, i);
+
+        if (verbose_flag)
+            printf("bytes_to_copy: %u\nattr_name: %s\n", bytes_to_copy, attr_name);
+
+#ifdef XATTR_NOFOLLOW
+        if (setxattr(target, attr_name, chunk, bytes_to_copy, 0, XATTR_NOFOLLOW)) {
+#else
+        if (lsetxattr(target, attr_name, chunk, bytes_to_copy, 0)) {
+#endif
+            return 1;
+        }
+    }
+
+  return 0;
+}
+
+
 //store the data in extended attr of <source> as file <target>
 int retrieve_file(char *source, char *target)
 {
-    FILE *of, *tf;
+    FILE *tf;
     byte *buffer;
+    byte *buffer_head;
+    int i;
     int bytes_read;
-    const char attr_name[] = ATTR_NAME;
+    int total_bytes_read;
+    char * attr_name;
 
+    attr_name = (char *) malloc(sizeof(char) * ATTR_LENGTH+1);
     buffer = (byte *) malloc(sizeof(byte) * DEFAULT_MAX_FILE_SIZE);
+    buffer_head = buffer;
+    total_bytes_read = 0;
 
-    if (!(of = fopen(target, "w+"))) {
-        error_exit(ATTRACH_ERR_FILE);
-    }
+    for (i = 0; ;i++) {
+        sprintf(attr_name, ATTR_BASE_NAME, i);
 
-#if defined (XATTR_NOFOLLOW) && defined (XATTR_SHOWCOMPRESSION)
-    if (!(bytes_read = getxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE,
-                    0, XATTR_NOFOLLOW|XATTR_SHOWCOMPRESSION))) {
-        error_exit(ATTRACH_ERR_RETRIEVE); 
-    }
+#ifdef XATTR_NOFOLLOW
+        if (-1 == (bytes_read = getxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE,
+                        0, XATTR_NOFOLLOW|XATTR_SHOWCOMPRESSION))) {
+            break;
+        }
 #else
-    if (!(bytes_read = lgetxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE))) {
+        if (-1 == (bytes_read = lgetxattr(source, attr_name, buffer, sizeof(byte) * DEFAULT_MAX_FILE_SIZE))) {
+            break;
+        }
+#endif
+        buffer += DEFAULT_CHUNK_SIZE;
+        total_bytes_read += bytes_read;
+    }
+
+    //no bytes read, failure
+    if (total_bytes_read == 0) {
         error_exit(ATTRACH_ERR_RETRIEVE); 
     }
-#endif
 
-    if (!(tf = fopen(target, "r+"))) {
+    //bytes read, then failed (end of file reached) so write out buffer
+    if (!(tf = fopen(target, "wb"))) {
         error_exit(ATTRACH_ERR_FILE_OUT); 
     }
 
-    fwrite(buffer, sizeof(byte), bytes_read, tf);
+    fwrite(buffer_head, sizeof(byte), total_bytes_read, tf);
+
 
     return 0;
 }
 
 int remove_attribute(char *target)
 {
-#ifdef XATTR_NOFOLLOW
-    if (removexattr(target, attribute_name, XATTR_NOFOLLOW)) {
-#else
-    if (lremovexattr(target, attribute_name)) {
-#endif
-        error_exit(ATTRACH_ERR_REMOVE); 
-    }
+    int i;
+    char *attr_name;
 
+    //attr_name buffer could be refactored
+    attr_name = (char *) malloc(sizeof(char) * ATTR_LENGTH+1);
+
+    for (i = 0; ;i++) {
+        sprintf(attr_name, ATTR_BASE_NAME, i);
+
+#ifdef XATTR_NOFOLLOW
+        if (removexattr(target, attr_name, XATTR_NOFOLLOW)) {
+#else
+        if (lremovexattr(target, attr_name)) {
+#endif
+            break;
+        }
+        }
+        if (i == 0) {
+            error_exit(ATTRACH_ERR_REMOVE); 
+        }
     return 0; 
 }
 
