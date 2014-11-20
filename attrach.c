@@ -203,6 +203,10 @@ int main( int ac, char* av[])
         }
     }
 
+    //check for options but no files
+    if (ac - optind != 3)
+        error_exit(ATTRACH_ERR_USAGE);
+
     if (!strcmp(av[optind], "attach")){
         if (ac - optind != 3)
             error_exit(ATTRACH_ERR_USAGE);
