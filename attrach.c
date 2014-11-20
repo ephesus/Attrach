@@ -191,7 +191,7 @@ void error_exit(int err)
             error_message = generic_fail;
     }
 
-    printf("Error: %s\n", error_message);
+    fprintf(stderr, "Error: %s\n", error_message);
 
     exit(1);
 }
